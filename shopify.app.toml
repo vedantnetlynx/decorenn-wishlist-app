@@ -3,17 +3,17 @@
 client_id = "0901b73e16ad8d0e1fefd51e716436c4"
 name = "custom wishlist app1"
 handle = "custom-wishlist-app1"
-application_url = "https://shark-statutes-reader-prediction.trycloudflare.com"
+application_url = "https://decorenn-wishlist-app.onrender.com"
 embedded = true
 
 [access_scopes]
 scopes = "read_products"
 
 [auth]
-redirect_urls = [ "https://shark-statutes-reader-prediction.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://decorenn-wishlist-app.onrender.com/api/auth" ]
 
 [app_proxy]
-url = "https://shark-statutes-reader-prediction.trycloudflare.com/proxy"
+url = "https://decorenn-wishlist-app.onrender.com/proxy"
 subpath = "wishlist"
 prefix = "apps"
 
