@@ -1,0 +1,22 @@
+{% comment %}
+  Wishlist heart button snippet.
+  Usage:
+    {% render 'wishlist-heart', product: product %}
+  or, when the current variant is known:
+    {% render 'wishlist-heart', product: product, variant: product.selected_or_first_available_variant %}
+{% endcomment %}
+
+{%- assign wl_variant = variant | default: product.selected_or_first_available_variant -%}
+
+<button
+  type="button"
+  class="wl-heart"
+  aria-pressed="false"
+  aria-label="Add to wishlist"
+  data-product-id="{{ product.id | prepend: 'gid://shopify/Product/' }}"
+  data-variant-id="{{ wl_variant.id | prepend: 'gid://shopify/ProductVariant/' }}"
+>
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M12 21s-7-4.4-9.3-9C1.2 8.8 3 5 6.6 5c2 0 3.4 1.1 5.4 3 2-1.9 3.4-3 5.4-3 3.6 0 5.4 3.8 3.9 7-2.3 4.6-9.3 9-9.3 9z"/>
+  </svg>
+</button>

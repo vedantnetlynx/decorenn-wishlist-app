@@ -1,0 +1,254 @@
+(function () {
+    "use strict";
+
+    const cfg = window.__wishlistPageConfig || {};
+    const grid = document.querySelector("[data-wl-grid]");
+    const errorEl = document.querySelector("[data-wl-error]");
+    const emptyEl = document.querySelector("[data-wl-empty]");
+    const retryBtn = document.querySelector("[data-wl-retry]");
+
+    const loadMoreBtn = document.querySelector("[data-wl-load-more]");
+    const loadMoreWrap = document.querySelector(".wl-page__more");
+
+    if (!grid) return;
+
+    const esc = (s) =>
+        String(s ?? "").replace(/[&<>"']/g, (c) => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+        }[c]));
+
+    const numericId = (gid) => String(gid).split("/").pop();
+
+    const formatPrice = (amount, currency) => {
+        if (amount == null || amount === "") return "";
+        try {
+            return new Intl.NumberFormat(undefined, {
+                style: "currency",
+                currency: currency || "USD",
+            }).format(Number(amount));
+        } catch (e) {
+            return amount;
+        }
+    };
+
+    const readGuest = () => {
+        try {
+            const raw = JSON.parse(localStorage.getItem("wishlist_v1") || "[]");
+            return raw.map((i) => (typeof i === "string" ? i : i.variantGid)).filter(Boolean);
+        } catch (e) {
+            return [];
+        }
+    };
+
+    const writeGuest = (gids) => {
+        try {
+            const raw = JSON.parse(localStorage.getItem("wishlist_v1") || "[]");
+            const next = raw.filter((i) => gids.includes(typeof i === "string" ? i : i.variantGid));
+            localStorage.setItem("wishlist_v1", JSON.stringify(next));
+        } catch (e) { }
+    };
+
+    function showEmpty() {
+        errorEl.hidden = true;
+        grid.hidden = true;
+        if (loadMoreWrap) loadMoreWrap.hidden = true;
+        emptyEl.hidden = false;
+    }
+
+    function cardHtml(item) {
+        const gid = esc(item.variantGid);
+
+        if (item.unavailable) {
+            return `
+                <div class="wl-card wl-card--unavailable" data-gid="${gid}">
+                    <div class="wl-card__img wl-card__img--empty">No longer available</div>
+                    <div class="wl-card__body">
+                        <div class="wl-card__title">This product is no longer available</div>
+                        <div class="wl-card__actions">
+                            <button type="button" class="wl-btn-remove" data-gid="${gid}">Remove</button>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        const url = item.productHandle
+            ? `${(cfg.rootUrl || "/").replace(/\/$/, "")}/products/${encodeURIComponent(item.productHandle)}?variant=${numericId(item.variantGid)}`
+            : "#";
+
+        const img = item.image
+            ? `<img class="wl-card__img" src="${esc(item.image)}" alt="${esc(item.title)}" loading="lazy">`
+            : `<div class="wl-card__img wl-card__img--empty">No image</div>`;
+
+        const variant =
+            item.variantTitle && item.variantTitle !== "Default Title"
+                ? `<div class="wl-card__variant">${esc(item.variantTitle)}</div>`
+                : "";
+
+        const soldOut = item.availableForSale === false
+            ? `<div class="wl-card__soldout">Sold out</div>`
+            : "";
+
+        const atcBtn = item.availableForSale === false
+            ? `<button type="button" class="wl-btn-atc" disabled>Sold out</button>`
+            : `<button type="button" class="wl-btn-atc wl-primary" data-variant-id="${numericId(item.variantGid)}">Add to cart</button>`;
+
+        const actionsHtml = item.hideAddToCart
+            ? `<button type="button" class="wl-btn-remove wl-btn-remove--only" data-gid="${gid}" title="Remove from wishlist">Remove</button>`
+            : `${atcBtn}<button type="button" class="wl-btn-remove" data-gid="${gid}" title="Remove from wishlist">Remove</button>`;
+
+        return `
+            <div class="wl-card" data-gid="${gid}">
+                <a href="${esc(url)}" class="wl-card__link">${img}</a>
+                <div class="wl-card__body">
+                    <a href="${esc(url)}" class="wl-card__title">${esc(item.title)}</a>
+                    ${variant}
+                    <div class="wl-card__price">${esc(formatPrice(item.price, item.currencyCode))}</div>
+                    ${soldOut}
+                    <div class="wl-card__actions">
+                        ${actionsHtml}
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    async function removeItem(gid, btn) {
+        btn.disabled = true;
+        btn.textContent = "Removing...";
+
+        if (cfg.loggedIn) {
+            try {
+                const res = await fetch(`${cfg.apiBase}/items/${encodeURIComponent(gid)}`, { method: "DELETE" });
+                if (!res.ok) throw new Error("Delete failed: " + res.status);
+            } catch (e) {
+                console.error(e);
+                btn.disabled = false;
+                btn.textContent = "Remove";
+                return;
+            }
+        } else {
+            writeGuest(readGuest().filter((g) => g !== gid));
+        }
+
+        btn.closest(".wl-card")?.remove();
+
+        if (window.__wishlist && typeof window.__wishlist.refresh === "function") {
+            window.__wishlist.refresh();
+        }
+
+        if (!grid.children.length) showEmpty();
+    }
+
+    async function addToCart(variantId, btn) {
+        if (!variantId || btn.disabled) return;
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Adding...";
+
+        try {
+            const root = (cfg.rootUrl || "/").replace(/\/$/, "");
+            const res = await fetch(`${root}/cart/add.js`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                body: JSON.stringify({
+                    id: variantId,
+                    quantity: 1,
+                }),
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.description || errData.message || "Failed to add to cart");
+            }
+
+            btn.textContent = "Added!";
+
+            // Notify theme cart systems
+            document.dispatchEvent(new CustomEvent("cart:refresh", { bubbles: true }));
+            document.dispatchEvent(new CustomEvent("cart:updated", { bubbles: true }));
+
+            if (cfg.cartType === "page") {
+                window.location.href = `${root}/cart`;
+                return;
+            }
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }, 1500);
+        } catch (err) {
+            console.error("[wishlist] Add to cart error:", err);
+            btn.textContent = "Error";
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }, 2000);
+        }
+    }
+
+    let allItems = [];
+    const PAGE_SIZE = 20;
+    let visibleCount = PAGE_SIZE;
+
+    function renderBatch() {
+        const slice = allItems.slice(0, visibleCount);
+        grid.innerHTML = slice.map(cardHtml).join("");
+        errorEl.hidden = true;
+        emptyEl.hidden = true;
+        grid.hidden = false;
+
+        if (loadMoreWrap) {
+            loadMoreWrap.hidden = visibleCount >= allItems.length;
+        }
+    }
+
+    grid.addEventListener("click", (e) => {
+        const removeBtn = e.target.closest(".wl-btn-remove");
+        if (removeBtn) {
+            removeItem(removeBtn.dataset.gid, removeBtn);
+            return;
+        }
+
+        const atcBtn = e.target.closest(".wl-btn-atc");
+        if (atcBtn && atcBtn.dataset.variantId) {
+            addToCart(atcBtn.dataset.variantId, atcBtn);
+        }
+    });
+
+    loadMoreBtn?.addEventListener("click", () => {
+        visibleCount += PAGE_SIZE;
+        renderBatch();
+    });
+
+    async function load() {
+        errorEl.hidden = true;
+        if (loadMoreWrap) loadMoreWrap.hidden = true;
+
+        const guestVariants = cfg.loggedIn ? [] : readGuest();
+
+        if (!cfg.loggedIn && guestVariants.length === 0) return showEmpty();
+
+        try {
+            const res = await fetch(`${cfg.apiBase}/wishlist`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ guestVariants }),
+            });
+            const json = JSON.parse(await res.text());
+            if (!json.success) throw new Error(json.error || "Request failed");
+            if (!json.items || json.items.length === 0) return showEmpty();
+
+            allItems = json.items;
+            visibleCount = PAGE_SIZE;
+            renderBatch();
+        } catch (err) {
+            console.error("Wishlist load failed:", err);
+            errorEl.hidden = false;
+        }
+    }
+
+    retryBtn?.addEventListener("click", load);
+    load();
+})();

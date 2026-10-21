@@ -1,0 +1,42 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "0901b73e16ad8d0e1fefd51e716436c4"
+name = "custom wishlist app1"
+handle = "custom-wishlist-app1"
+application_url = "https://shark-statutes-reader-prediction.trycloudflare.com"
+embedded = true
+
+[access_scopes]
+scopes = "read_products"
+
+[auth]
+redirect_urls = [ "https://shark-statutes-reader-prediction.trycloudflare.com/api/auth" ]
+
+[app_proxy]
+url = "https://shark-statutes-reader-prediction.trycloudflare.com/proxy"
+subpath = "wishlist"
+prefix = "apps"
+
+[webhooks]
+api_version = "2024-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/scopes_update"
+  topics = [ "app/scopes_update" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/products"
+  topics = [ "products/update", "products/delete" ]
+
+  [[webhooks.subscriptions]]
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  uri = "/webhooks/privacy"
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "decorenn-test-store.myshopify.com"
+keep_tunnel_url = true

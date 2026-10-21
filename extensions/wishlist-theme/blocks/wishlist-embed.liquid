@@ -1,0 +1,30 @@
+{% comment %}
+  Wishlist app embed block.
+  Enable in: Online Store > Themes > Customize > App embeds > Wishlist
+{% endcomment %}
+
+<script>
+  window.__wishlistConfig = {
+    shop: {{ shop.permanent_domain | json }},
+    currency: {{ cart.currency.iso_code | json }},
+    customerId: {% if customer %}{{ customer.id | json }}{% else %}null{% endif %},
+    apiBase: "/apps/wishlist/api",
+    rootUrl: {{ routes.root_url | json }}
+  };
+</script>
+
+<link rel="stylesheet" href="{{ 'wishlist.css' | asset_url }}">
+<script src="{{ 'wishlist.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "Wishlist",
+  "target": "body",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Wishlist is active. Configure colors, icon size, and page text in the app admin under Apps → custom wishlist app1."
+    }
+  ]
+}
+{% endschema %}

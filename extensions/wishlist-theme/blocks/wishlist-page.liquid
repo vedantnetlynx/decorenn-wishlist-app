@@ -1,0 +1,56 @@
+{% comment %}
+  Wishlist page app block.
+{% endcomment %}
+
+<script>
+  window.__wishlistPageConfig = {
+    apiBase: "/apps/wishlist/api",
+    pageTitle: {{ block.settings.page_title | default: "My Wishlist" | json }},
+    emptyText: {{ block.settings.empty_text | default: "You haven't saved anything yet." | json }},
+    cartType: {{ settings.cart_type | default: "page" | json }},
+    rootUrl: {{ routes.root_url | json }},
+    loggedIn: {% if customer %}true{% else %}false{% endif %}
+  };
+</script>
+
+<script src="{{ 'wishlist-page.js' | asset_url }}" defer></script>
+
+<div class="wl-page-wrap" data-wishlist-page>
+  <h1 class="wl-page__title" data-wl-title>{{ block.settings.page_title | default: "My Wishlist" }}</h1>
+
+  <div class="wl-page__error" data-wl-error hidden>
+    <p>Sorry — we couldn't load your wishlist. <button type="button" class="wl-retry" data-wl-retry>Try again</button></p>
+  </div>
+
+  <div class="wl-page__empty" data-wl-empty hidden>
+    <p data-wl-empty-text>{{ block.settings.empty_text | default: "You haven't saved anything yet." }}</p>
+    <a class="wl-card__actions wl-primary" style="display:inline-block;padding:10px 16px;border-radius:4px;text-decoration:none;" href="{{ routes.root_url }}">Continue shopping</a>
+  </div>
+
+  <div class="wl-page" data-wl-grid hidden></div>
+
+  <div class="wl-page__more" style="text-align: center; margin-top: 24px;" hidden>
+    <button type="button" class="wl-load-more" data-wl-load-more style="padding: 10px 20px; cursor: pointer; border: 1px solid #111; background: #fff;">Load more</button>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Wishlist Page",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "page_title",
+      "label": "Page title",
+      "default": "My Wishlist"
+    },
+    {
+      "type": "textarea",
+      "id": "empty_text",
+      "label": "Empty state text",
+      "default": "You haven't saved anything yet."
+    }
+  ]
+}
+{% endschema %}

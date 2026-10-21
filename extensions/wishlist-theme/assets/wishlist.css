@@ -1,0 +1,433 @@
+ /* Wishlist heart button */
+ .wl-heart {
+     --wl-icon-color: #000000;
+     --wl-icon-active-color: #e63946;
+     --wl-icon-size: 24px;
+
+     position: absolute;
+     top: 8px;
+     right: 8px;
+     z-index: 2;
+
+     width: calc(var(--wl-icon-size) + 12px);
+     height: calc(var(--wl-icon-size) + 12px);
+
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+
+     padding: 6px;
+     margin: 0;
+
+     background: rgba(255, 255, 255, 0.9);
+     border: none;
+     border-radius: 50%;
+     cursor: pointer;
+
+     transition: transform 120ms ease, background-color 120ms ease;
+     -webkit-tap-highlight-color: transparent;
+ }
+
+ .wl-heart:hover {
+     transform: scale(1.08);
+ }
+
+ .wl-heart:focus-visible {
+     outline: 2px solid var(--wl-icon-active-color);
+     outline-offset: 2px;
+ }
+
+ .wl-heart svg {
+     width: var(--wl-icon-size);
+     height: var(--wl-icon-size);
+     fill: none;
+     stroke: var(--wl-icon-color);
+     stroke-width: 2;
+     stroke-linecap: round;
+     stroke-linejoin: round;
+     transition: fill 150ms ease, stroke 150ms ease;
+ }
+
+ /* Saved state — filled heart, red */
+ .wl-heart[aria-pressed="true"] svg {
+     fill: var(--wl-icon-active-color);
+     stroke: var(--wl-icon-active-color);
+ }
+
+ /* While a network request is in flight */
+ .wl-heart[data-loading="true"] {
+     opacity: 0.6;
+     pointer-events: none;
+     cursor: wait;
+ }
+
+ /* Error state — briefly flashes red border if the request fails */
+ .wl-heart[data-error="true"] {
+     animation: wl-shake 320ms ease;
+     border: 2px solid #d33;
+ }
+
+ @keyframes wl-shake {
+
+     0%,
+     100% {
+         transform: translateX(0);
+     }
+
+     25% {
+         transform: translateX(-3px);
+     }
+
+     75% {
+         transform: translateX(3px);
+     }
+ }
+
+ /* Product card needs position: relative for the absolute heart to anchor correctly.
+   Only apply if the card doesn't already have it — merchant themes vary. */
+ .wl-has-heart {
+     position: relative;
+ }
+
+ /* Header counter badge */
+ [data-wishlist-count] {
+     display: inline-block;
+     min-width: 18px;
+     padding: 0 5px;
+     margin-left: 4px;
+     font-size: 12px;
+     line-height: 18px;
+     text-align: center;
+     color: #fff;
+     background: #e63946;
+     border-radius: 9px;
+     vertical-align: middle;
+ }
+
+ [data-wishlist-count][data-count="0"] {
+     display: none;
+ }
+
+ /* Wishlist page card grid (used later when we build the page) */
+ .wl-page {
+     display: grid;
+     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+     gap: 24px;
+     margin: 24px 0;
+ }
+
+ .wl-page__empty,
+ .wl-page__error {
+     padding: 40px 0;
+     text-align: center;
+     color: #555;
+ }
+
+ .wl-card {
+     position: relative;
+     display: flex;
+     flex-direction: column;
+     gap: 8px;
+     padding: 12px;
+     border: 1px solid #e5e5e5;
+     border-radius: 8px;
+ }
+
+ .wl-card__image {
+     width: 100%;
+     aspect-ratio: 1 / 1;
+     object-fit: cover;
+     border-radius: 6px;
+     background: #f4f4f4;
+ }
+
+ .wl-card__title {
+     font-weight: 600;
+     line-height: 1.3;
+ }
+
+ .wl-card__variant {
+     font-size: 14px;
+     color: #666;
+ }
+
+ .wl-card__price {
+     font-weight: 600;
+ }
+
+ .wl-card--unavailable {
+     opacity: 0.6;
+ }
+
+ .wl-card__badge {
+     display: inline-block;
+     padding: 2px 8px;
+     font-size: 12px;
+     color: #fff;
+     background: #888;
+     border-radius: 4px;
+ }
+
+ .wl-card__actions {
+     display: flex;
+     gap: 8px;
+     flex-wrap: wrap;
+     margin-top: auto;
+ }
+
+ .wl-card__actions button,
+ .wl-card__actions a {
+     flex: 1 1 auto;
+     padding: 8px 12px;
+     font-size: 14px;
+     text-align: center;
+     text-decoration: none;
+     border: 1px solid #111;
+     border-radius: 4px;
+     background: #fff;
+     color: #111;
+     cursor: pointer;
+ }
+
+ .wl-card__actions a.wl-primary,
+ .wl-card__actions button.wl-primary {
+     background: #111;
+     color: #fff;
+ }
+
+ @media (max-width: 480px) {
+     .wl-page {
+         grid-template-columns: 1fr 1fr;
+         gap: 12px;
+     }
+
+     .wl-page .wl-card {
+         padding: 8px;
+     }
+ }
+
+ .wl-heart {
+     --wl-icon-color: #000000;
+     --wl-icon-active-color: #e63946;
+     --wl-icon-size: 24px;
+
+     position: absolute;
+     top: 8px;
+     right: 8px;
+     z-index: 10;
+     /* NEW — puts us above any theme button */
+
+     width: calc(var(--wl-icon-size) + 12px);
+     height: calc(var(--wl-icon-size) + 12px);
+
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+
+     padding: 6px;
+     margin: 0;
+
+     background: rgba(255, 255, 255, 0.9);
+     border: none;
+     border-radius: 50%;
+     cursor: pointer;
+
+     transition: transform 120ms ease, background-color 120ms ease;
+     -webkit-tap-highlight-color: transparent;
+ }
+
+ [data-wishlist-count] {
+     display: inline-block;
+     min-width: 18px;
+     padding: 0 5px;
+     margin-left: 4px;
+     font-size: 12px;
+     line-height: 18px;
+     text-align: center;
+     color: #fff;
+     background: #e63946;
+     border-radius: 9px;
+     vertical-align: middle;
+ }
+
+ [data-wishlist-count][data-count="0"] {
+     display: none;
+ }
+
+ [data-wishlist-count].wishlist-h-count,
+ [data-wishlist-count].wishlist-total-count,
+ [data-wishlist-count] {
+     display: inline-block;
+     min-width: 18px;
+     padding: 0 5px;
+     margin-left: 4px;
+     font-size: 12px;
+     line-height: 18px;
+     text-align: center;
+     color: #fff;
+     background: #e63946;
+     border-radius: 9px;
+     vertical-align: middle;
+ }
+
+ /* Wishlist Page Additions */
+ .wl-page-wrap {
+     max-width: 1200px;
+     margin: 40px auto;
+     padding: 0 20px;
+ }
+
+ .wl-page__title {
+     font-size: 2rem;
+     margin-bottom: 24px;
+     text-align: center;
+ }
+
+ .wl-page__more {
+     text-align: center;
+     padding: 24px 0;
+ }
+
+ .wl-load-more {
+     padding: 10px 20px;
+     font-size: 14px;
+     background: #fff;
+     border: 1px solid #111;
+     border-radius: 4px;
+     cursor: pointer;
+     transition: background 150ms ease;
+ }
+
+ .wl-load-more:hover {
+     background: #f4f4f4;
+ }
+
+ .wl-card__image img {
+     display: block;
+     width: 100%;
+     height: 100%;
+     object-fit: cover;
+ }
+
+ .wl-page {
+     display: grid;
+     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+     gap: 24px;
+ }
+
+ .wl-page[hidden] {
+     display: none;
+ }
+
+ .wl-card__img {
+     width: 100%;
+     aspect-ratio: 1;
+     object-fit: cover;
+     border-radius: 6px;
+     display: block;
+ }
+
+ .wl-card__img--empty {
+     background: #eee;
+     color: #777;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     font-size: 14px;
+     text-align: center;
+ }
+
+ .wl-card__body {
+     padding-top: 10px;
+ }
+
+ .wl-card__title {
+     display: block;
+     font-weight: 600;
+     font-size: 16px;
+     color: inherit;
+     text-decoration: none;
+ }
+
+ .wl-card__variant {
+     color: #666;
+     font-size: 14px;
+     margin-top: 4px;
+ }
+
+ .wl-card__price {
+     font-weight: 700;
+     margin-top: 8px;
+ }
+
+ .wl-card__soldout {
+     color: #b42318;
+     font-size: 13px;
+     margin-top: 4px;
+ }
+
+ .wl-card--unavailable {
+     opacity: .7;
+ }
+
+ .wl-card__actions {
+     display: flex;
+     gap: 8px;
+     margin-top: 12px;
+ }
+
+ .wl-btn-atc,
+ .wl-btn-remove {
+     padding: 8px 12px;
+     font-size: 14px;
+     font-weight: 500;
+     border-radius: 4px;
+     cursor: pointer;
+     transition: all 150ms ease;
+     text-align: center;
+ }
+
+ .wl-btn-atc {
+     flex: 2 1 0;
+ }
+
+ .wl-btn-atc.wl-primary {
+     background: #111;
+     color: #fff;
+     border: 1px solid #111;
+ }
+
+ .wl-btn-atc.wl-primary:hover:not(:disabled) {
+     background: #333;
+     border-color: #333;
+ }
+
+ .wl-btn-atc:disabled {
+     background: #f4f4f4;
+     color: #888;
+     border: 1px solid #ddd;
+     cursor: not-allowed;
+ }
+
+ .wl-btn-remove {
+     flex: 1 1 0;
+     background: #fff;
+     color: #333;
+     border: 1px solid #ccc;
+ }
+
+ .wl-btn-remove:hover:not(:disabled) {
+     background: #fef2f2;
+     color: #e63946;
+     border-color: #e63946;
+ }
+
+ .wl-btn-remove:disabled {
+     opacity: .5;
+     cursor: default;
+ }
+
+ .wl-btn-remove--only {
+     flex: 1 1 100%;
+     width: 100%;
+ }

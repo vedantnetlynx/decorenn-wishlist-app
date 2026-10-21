@@ -1,0 +1,8 @@
+### Add to wishlist (will fail as guest — expected)
+POST https://decorenn-test-store.myshopify.com/apps/wishlist/api/items
+Content-Type: application/json
+
+{
+  "productGid": "gid://shopify/Product/123",
+  "variantGid": "gid://shopify/ProductVariant/456"
+}
