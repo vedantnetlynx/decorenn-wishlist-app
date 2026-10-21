@@ -10,7 +10,11 @@ embedded = true
 scopes = "read_products"
 
 [auth]
-redirect_urls = [ "https://decorenn-wishlist-app.onrender.com/api/auth" ]
+redirect_urls = [
+  "https://decorenn-wishlist-app.onrender.com/auth/callback",
+  "https://decorenn-wishlist-app.onrender.com/auth/shopify/callback",
+  "https://decorenn-wishlist-app.onrender.com/api/auth"
+]
 
 [app_proxy]
 url = "https://decorenn-wishlist-app.onrender.com/proxy"
