@@ -42,5 +42,5 @@ api_version = "2024-10"
 
 [build]
 automatically_update_urls_on_dev = true
-dev_store_url = "decorenn-test-store.myshopify.com"
+dev_store_url = "decorenllc.myshopify.com"
 keep_tunnel_url = true
