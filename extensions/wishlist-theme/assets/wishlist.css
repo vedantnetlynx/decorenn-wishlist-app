@@ -1,7 +1,7 @@
  /* Wishlist heart button */
  .wl-heart {
      --wl-icon-color: #000000;
-     --wl-icon-active-color: #e63946;
+     --wl-icon-active-color: #934B32;
      --wl-icon-size: 24px;
 
      position: absolute;
@@ -99,7 +99,7 @@
      line-height: 18px;
      text-align: center;
      color: #fff;
-     background: #e63946;
+     background: #934B32;
      border-radius: 9px;
      vertical-align: middle;
  }
@@ -245,7 +245,7 @@
      line-height: 18px;
      text-align: center;
      color: #fff;
-     background: #e63946;
+     background: #934B32;
      border-radius: 9px;
      vertical-align: middle;
  }
@@ -259,13 +259,13 @@
  [data-wishlist-count] {
      display: inline-block;
      min-width: 18px;
-     padding: 0 5px;
+     padding: 0 0px;
      margin-left: 4px;
      font-size: 12px;
      line-height: 18px;
      text-align: center;
      color: #fff;
-     background: #e63946;
+     background: #934B32;
      border-radius: 9px;
      vertical-align: middle;
  }
@@ -418,8 +418,8 @@
 
  .wl-btn-remove:hover:not(:disabled) {
      background: #fef2f2;
-     color: #e63946;
-     border-color: #e63946;
+     color: #934B32;
+     border-color: #934B32;
  }
 
  .wl-btn-remove:disabled {

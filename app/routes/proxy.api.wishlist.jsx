@@ -111,6 +111,7 @@ export const action = async ({ request }) => {
                     currencyCode: data.data.shop?.currencyCode,
                     availableForSale: node.availableForSale,
                     hideAddToCart,
+                    hidePrice: hideAddToCart,
                     image:
                         node.media?.nodes?.[0]?.preview?.image?.url ||
                         node.product?.featuredMedia?.preview?.image?.url ||

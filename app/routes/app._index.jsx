@@ -6,7 +6,7 @@ import db from "../db.server";
 
 const DEFAULT_SETTINGS = {
   iconColor: "#000000",
-  iconActiveColor: "#e63946",
+  iconActiveColor: "#934B32",
   iconSize: 24,
   pageTitle: "My Wishlist",
   emptyStateText: "You haven't saved anything yet.",
@@ -41,7 +41,7 @@ export const action = async ({ request }) => {
   const formData = await request.formData();
 
   const iconColor = String(formData.get("iconColor") || "#000000").trim();
-  const iconActiveColor = String(formData.get("iconActiveColor") || "#e63946").trim();
+  const iconActiveColor = String(formData.get("iconActiveColor") || "#934B32").trim();
   const iconSizeRaw = parseInt(String(formData.get("iconSize") || "24"), 10);
   const iconSize = isNaN(iconSizeRaw) ? 24 : Math.min(Math.max(iconSizeRaw, 16), 48);
 
@@ -203,9 +203,9 @@ export default function WishlistAdminPage() {
                 </label>
 
                 <label style={{ display: "block", fontWeight: 600, fontSize: "14px" }}>
-                  Hide "Add to Cart" for Specific Collections
+                  Hide "Add to Cart" & Price for Specific Collections
                   <span style={{ display: "block", fontSize: "12px", color: "#666", fontWeight: "normal", marginTop: "2px", marginBottom: "4px" }}>
-                    Enter comma-separated collection handles or titles (e.g. <code>custom-rugs, bespoke, swatches</code>). Products in these collections will only show the <strong>Remove</strong> button on the wishlist page.
+                    Enter comma-separated collection handles or titles (e.g. <code>custom-rugs, bespoke, swatches</code>). Products in these collections will hide their price and "Add to Cart" button on the wishlist page.
                   </span>
                   <input
                     type="text"

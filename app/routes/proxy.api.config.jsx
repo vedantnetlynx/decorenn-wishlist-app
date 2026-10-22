@@ -3,7 +3,7 @@ import prisma from "../db.server";
 
 const DEFAULT_SETTINGS = {
     iconColor: "#000000",
-    iconActiveColor: "#e63946",
+    iconActiveColor: "#934B32",
     iconSize: 24,
     pageTitle: "My Wishlist",
     emptyStateText: "You haven't saved anything yet.",

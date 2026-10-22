@@ -101,10 +101,11 @@ erDiagram
   - Displays a clean "Add to Cart" button that directly interacts with the Shopify cart API.
   - Features responsive card layout, single-item removal, and pagination / "Load more".
 
-### D. Collection-Based "Add to Cart" Exclusion
-- In Decorenn's business model, certain items (such as fabric swatches or made-to-order fabrics) should **not** display a standard direct "Add to Cart" button.
+### D. Collection-Based "Add to Cart" & Price Exclusion
+- In Decorenn's business model, certain items (such as fabric swatches or made-to-order fabrics) should **not** display a standard direct "Add to Cart" button or price.
 - The app includes a merchant configuration setting: `hideAddToCartCollections`.
-- When loading wishlist items, the backend inspects the product's collections. If it matches an excluded collection (e.g., `fabric`), the "Add to Cart" button is replaced by a "View Details" link.
+- When loading wishlist items, the backend inspects the product's collections. If it matches an excluded collection (e.g., `fabric`), the "Add to Cart" button and price are hidden, showing only the Remove button.
+- Clicking "Add to Cart" on available products updates the cart seamlessly via Ajax (`/cart/add.js`) and theme events without redirecting the user away from the Wishlist page.
 
 ### E. Embedded Merchant Admin Dashboard (`/app`)
 - Directly accessible from **Shopify Admin → Apps → custom wishlist app1**.

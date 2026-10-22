@@ -128,13 +128,18 @@
             ? `<button type="button" class="wl-btn-remove wl-btn-remove--only" data-gid="${gid}" title="Remove from wishlist">Remove</button>`
             : `${atcBtn}<button type="button" class="wl-btn-remove" data-gid="${gid}" title="Remove from wishlist">Remove</button>`;
 
+        const hidePrice = !!(item.hideAddToCart || item.hidePrice);
+        const priceHtml = hidePrice
+            ? ""
+            : `<div class="wl-card__price">${esc(formatPrice(item.price, item.currencyCode))}</div>`;
+
         return `
             <div class="wl-card" data-gid="${gid}">
                 <a href="${esc(url)}" class="wl-card__link">${img}</a>
                 <div class="wl-card__body">
                     <a href="${esc(url)}" class="wl-card__title">${esc(item.title)}</a>
                     ${variant}
-                    <div class="wl-card__price">${esc(formatPrice(item.price, item.currencyCode))}</div>
+                    ${priceHtml}
                     ${soldOut}
                     <div class="wl-card__actions">
                         ${actionsHtml}
@@ -200,10 +205,16 @@
             document.dispatchEvent(new CustomEvent("cart:refresh", { bubbles: true }));
             document.dispatchEvent(new CustomEvent("cart:updated", { bubbles: true }));
 
-            if (cfg.cartType === "page") {
-                window.location.href = `${root}/cart`;
-                return;
-            }
+            // Update cart count bubbles across the theme if present
+            try {
+                const cartRes = await fetch(`${root}/cart.js`);
+                if (cartRes.ok) {
+                    const cartData = await cartRes.json();
+                    document.querySelectorAll(".cart-count-bubble span, [data-cart-count], .cart-count").forEach((el) => {
+                        el.textContent = cartData.item_count;
+                    });
+                }
+            } catch (e) {}
 
             setTimeout(() => {
                 btn.disabled = false;
