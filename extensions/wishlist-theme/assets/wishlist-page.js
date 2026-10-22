@@ -2,6 +2,7 @@
     "use strict";
 
     const cfg = window.__wishlistPageConfig || {};
+    let API_BASE = cfg.apiBase || (window.location.hostname.includes("decorenllc") ? "/apps/wishlist-1/api" : "/apps/wishlist/api");
     const grid = document.querySelector("[data-wl-grid]");
     const errorEl = document.querySelector("[data-wl-error]");
     const emptyEl = document.querySelector("[data-wl-empty]");
@@ -11,6 +12,37 @@
     const loadMoreWrap = document.querySelector(".wl-page__more");
 
     if (!grid) return;
+
+    // Helper for resilient API calls with automatic subpath fallback (wishlist <-> wishlist-1)
+    async function apiFetch(path, options = {}) {
+        let res;
+        try {
+            res = await fetch(`${API_BASE}${path}`, { credentials: "same-origin", ...options });
+        } catch (e) {}
+
+        if (!res || res.status === 404) {
+            const alternateBase = API_BASE.includes("wishlist-1")
+                ? API_BASE.replace("wishlist-1", "wishlist")
+                : API_BASE.replace("wishlist", "wishlist-1");
+            if (alternateBase !== API_BASE) {
+                try {
+                    const retryRes = await fetch(`${alternateBase}${path}`, { credentials: "same-origin", ...options });
+                    if (retryRes && retryRes.ok) {
+                        API_BASE = alternateBase;
+                        res = retryRes;
+                    }
+                } catch (e) {}
+            }
+        }
+
+        if (!res) throw new Error("Network request failed");
+        const text = await res.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            throw new Error("Invalid JSON: " + text.slice(0, 100));
+        }
+    }
 
     const esc = (s) =>
         String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -117,8 +149,7 @@
 
         if (cfg.loggedIn) {
             try {
-                const res = await fetch(`${cfg.apiBase}/items/${encodeURIComponent(gid)}`, { method: "DELETE" });
-                if (!res.ok) throw new Error("Delete failed: " + res.status);
+                await apiFetch(`/items/${encodeURIComponent(gid)}`, { method: "DELETE" });
             } catch (e) {
                 console.error(e);
                 btn.disabled = false;
@@ -231,12 +262,11 @@
         if (!cfg.loggedIn && guestVariants.length === 0) return showEmpty();
 
         try {
-            const res = await fetch(`${cfg.apiBase}/wishlist`, {
+            const json = await apiFetch("/wishlist", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ guestVariants }),
             });
-            const json = JSON.parse(await res.text());
             if (!json.success) throw new Error(json.error || "Request failed");
             if (!json.items || json.items.length === 0) return showEmpty();
 

@@ -2,9 +2,18 @@
   Wishlist page app block.
 {% endcomment %}
 
+{%- assign wl_proxy_subpath = block.settings.proxy_subpath | default: "" -%}
+{%- if wl_proxy_subpath == blank -%}
+  {%- if shop.permanent_domain == "decorenllc.myshopify.com" -%}
+    {%- assign wl_proxy_subpath = "wishlist-1" -%}
+  {%- else -%}
+    {%- assign wl_proxy_subpath = "wishlist" -%}
+  {%- endif -%}
+{%- endif -%}
+
 <script>
   window.__wishlistPageConfig = {
-    apiBase: "/apps/wishlist/api",
+    apiBase: "/apps/{{ wl_proxy_subpath }}/api",
     pageTitle: {{ block.settings.page_title | default: "My Wishlist" | json }},
     emptyText: {{ block.settings.empty_text | default: "You haven't saved anything yet." | json }},
     cartType: {{ settings.cart_type | default: "page" | json }},
@@ -50,6 +59,12 @@
       "id": "empty_text",
       "label": "Empty state text",
       "default": "You haven't saved anything yet."
+    },
+    {
+      "type": "text",
+      "id": "proxy_subpath",
+      "label": "App Proxy Subpath",
+      "info": "Leave blank for automatic detection ('wishlist' on dev, 'wishlist-1' on live store)."
     }
   ]
 }

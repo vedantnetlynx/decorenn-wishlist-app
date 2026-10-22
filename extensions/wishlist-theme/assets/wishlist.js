@@ -8,8 +8,39 @@
     "use strict";
 
     const cfg = window.__wishlistConfig || {};
-    const API_BASE = cfg.apiBase || "/apps/wishlist/api";
+    let API_BASE = cfg.apiBase || (window.location.hostname.includes("decorenllc") ? "/apps/wishlist-1/api" : "/apps/wishlist/api");
     const IS_LOGGED_IN = !!cfg.customerId;
+
+    // Helper for resilient API calls with automatic subpath fallback (wishlist <-> wishlist-1)
+    async function apiFetch(path, options = {}) {
+        let res;
+        try {
+            res = await fetch(`${API_BASE}${path}`, { credentials: "same-origin", ...options });
+        } catch (e) {}
+
+        if (!res || res.status === 404) {
+            const alternateBase = API_BASE.includes("wishlist-1")
+                ? API_BASE.replace("wishlist-1", "wishlist")
+                : API_BASE.replace("wishlist", "wishlist-1");
+            if (alternateBase !== API_BASE) {
+                try {
+                    const retryRes = await fetch(`${alternateBase}${path}`, { credentials: "same-origin", ...options });
+                    if (retryRes && retryRes.ok) {
+                        API_BASE = alternateBase;
+                        res = retryRes;
+                    }
+                } catch (e) {}
+            }
+        }
+
+        if (!res) throw new Error("Network request failed");
+        const text = await res.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            throw new Error("Invalid JSON: " + text.slice(0, 100));
+        }
+    }
 
     // Selectors for cards and heart-injection points.
     // We target the theme's existing card class(es) and read GIDs from data attributes.
@@ -58,8 +89,7 @@
             return;
         }
         try {
-            const res = await fetch(`${API_BASE}/state`, { credentials: "same-origin" });
-            const json = await res.json();
+            const json = await apiFetch("/state");
             if (json && json.success && Array.isArray(json.variantGids)) {
                 savedGids = new Set(json.variantGids);
             }
@@ -69,8 +99,7 @@
 
     async function fetchConfig() {
         try {
-            const res = await fetch(`${API_BASE}/config`, { credentials: "same-origin" });
-            const json = await res.json();
+            const json = await apiFetch("/config");
             if (!json || !json.success || !json.settings) return;
             const s = json.settings;
             const root = document.documentElement;
@@ -85,24 +114,20 @@
         if (!IS_LOGGED_IN) {
             return { success: true, count: guestAdd(productGid, variantGid), variantGid };
         }
-        const res = await fetch(`${API_BASE}/items`, {
+        return await apiFetch("/items", {
             method: "POST",
-            credentials: "same-origin",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ productGid, variantGid }),
         });
-        return res.json();
     }
 
     async function apiRemove(variantGid) {
         if (!IS_LOGGED_IN) {
             return { success: true, count: guestRemove(variantGid), variantGid };
         }
-        const res = await fetch(
-            `${API_BASE}/items/${encodeURIComponent(variantGid)}`,
-            { method: "DELETE", credentials: "same-origin" }
-        );
-        return res.json();
+        return await apiFetch(`/items/${encodeURIComponent(variantGid)}`, {
+            method: "DELETE",
+        });
     }
 
     /* ---------------- Counter ---------------- */
@@ -274,13 +299,11 @@
         if (!guestItems.length) return;
 
         try {
-            const res = await fetch(`${API_BASE}/merge`, {
+            const json = await apiFetch("/merge", {
                 method: "POST",
-                credentials: "same-origin",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ items: guestItems }),
             });
-            const json = await res.json();
             if (json && json.success) {
                 localStorage.removeItem(LS_KEY);
                 await fetchState();
