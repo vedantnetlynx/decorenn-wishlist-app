@@ -219,7 +219,81 @@
         );
     }
 
+    /* ---------------- Swatch & Variant detection ---------------- */
+    function getCardCurrentVariantId(card) {
+        if (!card) return null;
+        // 1. Active swatch in fabric card
+        const activeSwatch = card.querySelector(".fabric-swatch.active, [data-swatch].active, .swatch.active, [data-vid].active");
+        if (activeSwatch) {
+            const vid = activeSwatch.dataset.vid || activeSwatch.getAttribute("data-vid");
+            if (vid) return vid;
+        }
+        // 2. Main image current VID
+        const mainImg = card.querySelector(".fabric-main-image, [data-current-vid]");
+        if (mainImg) {
+            const vid = mainImg.dataset.currentVid || mainImg.getAttribute("data-current-vid");
+            if (vid) return vid;
+        }
+        // 3. Card data-vid attribute
+        const cardVid = card.dataset.vid || card.getAttribute("data-vid");
+        if (cardVid) return cardVid;
+
+        return null;
+    }
+
+    function syncCardVariant(card) {
+        if (!card) return;
+        const vid = getCardCurrentVariantId(card);
+        if (!vid) return;
+        const heart = card.querySelector(".wl-heart");
+        if (!heart) return;
+        const newVariantGid = toGid("ProductVariant", vid);
+        heart.dataset.variantId = newVariantGid;
+        paintHeart(heart, savedGids.has(newVariantGid));
+    }
+
+    function getProductPageVariantId() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlVid = urlParams.get("variant");
+            if (urlVid) return urlVid;
+        } catch (e) {}
+
+        const form = document.querySelector('form[action*="/cart/add"], product-form form, .shopify-product-form, form[id*="product_form"]');
+        if (form) {
+            const idInput = form.querySelector('select[name="id"], input[name="id"][type="hidden"], input[name="id"]:checked, input[name="id"]');
+            if (idInput && idInput.value) return idInput.value;
+        }
+
+        const anyIdInput = document.querySelector('select[name="id"], input[name="id"]:checked, input[name="id"]');
+        if (anyIdInput && anyIdInput.value) return anyIdInput.value;
+
+        return null;
+    }
+
+    function syncProductPageHearts() {
+        const vid = getProductPageVariantId();
+        if (!vid) return;
+        const newVariantGid = toGid("ProductVariant", vid);
+
+        document.querySelectorAll(".wl-heart").forEach((heart) => {
+            if (heart.closest(CARD_SELECTOR) || heart.closest(EXCLUDE_SELECTOR)) return;
+            heart.dataset.variantId = newVariantGid;
+            paintHeart(heart, savedGids.has(newVariantGid));
+        });
+    }
+
     function refreshAllHearts() {
+        // Sync card hearts
+        document.querySelectorAll(CARD_SELECTOR).forEach((card) => {
+            if (card.closest(EXCLUDE_SELECTOR)) return;
+            syncCardVariant(card);
+        });
+
+        // Sync product page hearts
+        syncProductPageHearts();
+
+        // Ensure every heart is painted
         document.querySelectorAll(".wl-heart").forEach((heart) => {
             const variantGid = heart.dataset.variantId;
             if (!variantGid) return;
@@ -227,7 +301,60 @@
         });
     }
 
-    /* ---------------- Click handling ---------------- */
+    /* ---------------- Global Swatch & Option Click Listener ---------------- */
+    document.addEventListener("click", function (event) {
+        // 1. Swatch clicked inside a card
+        const swatch = event.target.closest(".fabric-swatch, [data-vid]");
+        if (swatch && !swatch.closest(EXCLUDE_SELECTOR)) {
+            const card = swatch.closest(CARD_SELECTOR) || swatch.closest("[data-pid]");
+            if (card) {
+                const vid = swatch.dataset.vid || swatch.getAttribute("data-vid");
+                if (vid) {
+                    card.dataset.vid = vid;
+                    card.setAttribute("data-vid", vid);
+                }
+                syncCardVariant(card);
+                setTimeout(() => syncCardVariant(card), 50);
+                setTimeout(() => syncCardVariant(card), 150);
+            }
+        }
+
+        // 2. Variant option / pill clicked on product page
+        const optBtn = event.target.closest(".product-form__input, [data-variant-id], [data-option-value], .variant-picker");
+        if (optBtn) {
+            setTimeout(syncProductPageHearts, 50);
+            setTimeout(syncProductPageHearts, 150);
+        }
+    }, true);
+
+    // Watch for variant inputs changing on product pages
+    document.addEventListener("change", function (event) {
+        if (event.target.matches('select[name="id"], input[name="id"], input[type="radio"], select, .product-form select')) {
+            setTimeout(syncProductPageHearts, 50);
+            setTimeout(syncProductPageHearts, 150);
+        }
+    });
+
+    // Hook URL changes (e.g. ?variant=12345 pushed by Shopify themes)
+    (function hookHistory() {
+        if (window.__wlHistoryHooked) return;
+        window.__wlHistoryHooked = true;
+        const origPush = history.pushState;
+        history.pushState = function () {
+            const ret = origPush.apply(this, arguments);
+            setTimeout(syncProductPageHearts, 50);
+            return ret;
+        };
+        const origReplace = history.replaceState;
+        history.replaceState = function () {
+            const ret = origReplace.apply(this, arguments);
+            setTimeout(syncProductPageHearts, 50);
+            return ret;
+        };
+        window.addEventListener("popstate", () => setTimeout(syncProductPageHearts, 50));
+    })();
+
+    /* ---------------- Heart Click handling ---------------- */
     document.addEventListener("click", async function (event) {
         const heart = event.target.closest(".wl-heart");
         if (!heart) return;
@@ -236,6 +363,14 @@
         event.stopPropagation();
 
         if (heart.dataset.loading === "true") return;
+
+        // Fresh synchronization of the variant before handling the click
+        const card = heart.closest(CARD_SELECTOR);
+        if (card) {
+            syncCardVariant(card);
+        } else {
+            syncProductPageHearts();
+        }
 
         const variantGid = heart.dataset.variantId;
         const productGid = heart.dataset.productId;
@@ -268,28 +403,36 @@
         }
     }, true);
 
-    /* ---------------- Swatch / variant change detection ----------------
-       Your theme updates each card's data-vid (and each swatch's data-vid)
-       when the user picks a fabric. We watch the card's data-vid and
-       update the heart's variant GID accordingly (SRS FR-5).
-    */
+    /* ---------------- Swatch / variant change observers ---------------- */
     function observeVariantChanges() {
         document.querySelectorAll(CARD_SELECTOR).forEach((card) => {
             if (card.__wlObserved) return;
             card.__wlObserved = true;
 
+            syncCardVariant(card);
+
             const observer = new MutationObserver(() => {
-                const newVid = card.getAttribute("data-vid");
-                if (!newVid) return;
-                const heart = card.querySelector(".wl-heart");
-                if (!heart) return;
-                const newVariantGid = toGid("ProductVariant", newVid);
-                if (heart.dataset.variantId === newVariantGid) return;
-                heart.dataset.variantId = newVariantGid;
-                paintHeart(heart, savedGids.has(newVariantGid));
+                syncCardVariant(card);
             });
 
-            observer.observe(card, { attributes: true, attributeFilter: ["data-vid"] });
+            // Observe data-vid, active class on swatches, and current-vid on image
+            observer.observe(card, {
+                attributes: true,
+                subtree: true,
+                attributeFilter: ["data-vid", "class", "data-current-vid", "src"]
+            });
+        });
+
+        // Also observe product form if present on PDP
+        const productForms = document.querySelectorAll('form[action*="/cart/add"], product-form, .shopify-product-form');
+        productForms.forEach((form) => {
+            if (form.__wlObserved) return;
+            form.__wlObserved = true;
+            syncProductPageHearts();
+            const observer = new MutationObserver(() => {
+                syncProductPageHearts();
+            });
+            observer.observe(form, { attributes: true, subtree: true, childList: true });
         });
     }
 
