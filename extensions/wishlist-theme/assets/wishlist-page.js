@@ -201,20 +201,30 @@
 
             btn.textContent = "Added!";
 
-            // Notify theme cart systems
-            document.dispatchEvent(new CustomEvent("cart:refresh", { bubbles: true }));
-            document.dispatchEvent(new CustomEvent("cart:updated", { bubbles: true }));
-
-            // Update cart count bubbles across the theme if present
+            // Fetch the updated cart count FIRST before firing events,
+            // so theme listeners that re-render on these events get fresh data
+            // and our DOM update isn't overwritten by a stale-cache re-render.
+            let itemCount = null;
             try {
-                const cartRes = await fetch(`${root}/cart.js`);
+                const cartRes = await fetch(`${root}/cart.js`, { credentials: "same-origin" });
                 if (cartRes.ok) {
                     const cartData = await cartRes.json();
-                    document.querySelectorAll(".cart-count-bubble span, [data-cart-count], .cart-count").forEach((el) => {
-                        el.textContent = cartData.item_count;
-                    });
+                    itemCount = cartData.item_count;
                 }
             } catch (e) {}
+
+            // Update cart count bubbles across the theme
+            if (itemCount !== null) {
+                document.querySelectorAll(".cart-count-bubble span, [data-cart-count], .cart-count").forEach((el) => {
+                    el.textContent = itemCount;
+                });
+            }
+
+            // Notify theme cart systems — pass count in detail so listeners
+            // don't need to do their own fetch (avoids a second race).
+            const cartEventDetail = itemCount !== null ? { detail: { itemCount } } : {};
+            document.dispatchEvent(new CustomEvent("cart:refresh", { bubbles: true, ...cartEventDetail }));
+            document.dispatchEvent(new CustomEvent("cart:updated", { bubbles: true, ...cartEventDetail }));
 
             setTimeout(() => {
                 btn.disabled = false;
