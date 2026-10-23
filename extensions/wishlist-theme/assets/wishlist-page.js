@@ -213,11 +213,57 @@
                 }
             } catch (e) {}
 
-            // Update cart count bubbles across the theme
+            // Update cart count across all common Dawn / Shopify theme patterns
             if (itemCount !== null) {
-                document.querySelectorAll(".cart-count-bubble span, [data-cart-count], .cart-count").forEach((el) => {
+                // Standard selectors
+                document.querySelectorAll(
+                    ".cart-count-bubble span[aria-hidden], " +
+                    ".cart-count-bubble span:not([class]), " +
+                    "[data-cart-count], " +
+                    ".cart-count, " +
+                    ".cart__count"
+                ).forEach((el) => {
                     el.textContent = itemCount;
                 });
+
+                // Dawn: cart-count-bubble visibility — show it when count > 0
+                document.querySelectorAll(".cart-count-bubble").forEach((bubble) => {
+                    if (itemCount > 0) bubble.removeAttribute("aria-hidden");
+                    // Dawn hides the bubble with aria-hidden when cart is empty
+                    const spans = bubble.querySelectorAll("span");
+                    spans.forEach((s) => {
+                        if (s.hasAttribute("aria-hidden")) {
+                            s.textContent = itemCount;
+                        } else {
+                            // The accessible text span
+                            s.textContent = itemCount + " items";
+                        }
+                    });
+                });
+
+                // Try Shopify Section Rendering API to force the theme to
+                // re-render its cart icon section — most reliable for Dawn.
+                try {
+                    const sectionRes = await fetch(
+                        `${root}/?sections=header`,
+                        { credentials: "same-origin", headers: { "Accept": "application/json" } }
+                    );
+                    if (sectionRes.ok) {
+                        const sections = await sectionRes.json();
+                        const headerHtml = sections["header"];
+                        if (headerHtml) {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(headerHtml, "text/html");
+                            // Find the updated bubble from the re-rendered section
+                            const newBubble = doc.querySelector(".cart-count-bubble");
+                            const existingBubble = document.querySelector(".cart-count-bubble");
+                            if (newBubble && existingBubble) {
+                                existingBubble.innerHTML = newBubble.innerHTML;
+                                existingBubble.removeAttribute("aria-hidden");
+                            }
+                        }
+                    }
+                } catch (e) {}
             }
 
             // Notify theme cart systems — pass count in detail so listeners

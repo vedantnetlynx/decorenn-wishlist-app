@@ -131,6 +131,8 @@
      padding: 12px;
      border: 1px solid #e5e5e5;
      border-radius: 8px;
+     height: 100%;
+     box-sizing: border-box;
  }
 
  .wl-card__image {
@@ -339,6 +341,9 @@
 
  .wl-card__body {
      padding-top: 10px;
+     display: flex;
+     flex-direction: column;
+     flex: 1;
  }
 
  .wl-card__title {
@@ -373,7 +378,8 @@
  .wl-card__actions {
      display: flex;
      gap: 8px;
-     margin-top: 12px;
+     margin-top: auto;
+     padding-top: 12px;
  }
 
  .wl-btn-atc,
