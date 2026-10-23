@@ -201,9 +201,7 @@
 
             btn.textContent = "Added!";
 
-            // Fetch the updated cart count FIRST before firing events,
-            // so theme listeners that re-render on these events get fresh data
-            // and our DOM update isn't overwritten by a stale-cache re-render.
+            // Get the fresh cart count from the server
             let itemCount = null;
             try {
                 const cartRes = await fetch(`${root}/cart.js`, { credentials: "same-origin" });
@@ -213,61 +211,62 @@
                 }
             } catch (e) {}
 
-            // Update cart count across all common Dawn / Shopify theme patterns
             if (itemCount !== null) {
-                // Standard selectors
-                document.querySelectorAll(
-                    ".cart-count-bubble span[aria-hidden], " +
-                    ".cart-count-bubble span:not([class]), " +
-                    "[data-cart-count], " +
-                    ".cart-count, " +
-                    ".cart__count"
-                ).forEach((el) => {
-                    el.textContent = itemCount;
-                });
+                const existingBubble = document.querySelector(".cart-count-bubble");
+                const cartIconLink = document.querySelector("#cart-icon-bubble");
 
-                // Dawn: cart-count-bubble visibility — show it when count > 0
-                document.querySelectorAll(".cart-count-bubble").forEach((bubble) => {
-                    if (itemCount > 0) bubble.removeAttribute("aria-hidden");
-                    // Dawn hides the bubble with aria-hidden when cart is empty
-                    const spans = bubble.querySelectorAll("span");
-                    spans.forEach((s) => {
+                if (existingBubble) {
+                    // --- Cart already had items: bubble exists, just update the count ---
+                    existingBubble.querySelectorAll("span").forEach((s) => {
                         if (s.hasAttribute("aria-hidden")) {
+                            // The visible number span
                             s.textContent = itemCount;
                         } else {
-                            // The accessible text span
-                            s.textContent = itemCount + " items";
+                            // The visually-hidden accessible text span
+                            s.textContent = itemCount + " items in cart";
                         }
                     });
-                });
-
-                // Try Shopify Section Rendering API to force the theme to
-                // re-render its cart icon section — most reliable for Dawn.
-                try {
-                    const sectionRes = await fetch(
-                        `${root}/?sections=header`,
-                        { credentials: "same-origin", headers: { "Accept": "application/json" } }
-                    );
-                    if (sectionRes.ok) {
-                        const sections = await sectionRes.json();
-                        const headerHtml = sections["header"];
-                        if (headerHtml) {
-                            const parser = new DOMParser();
-                            const doc = parser.parseFromString(headerHtml, "text/html");
-                            // Find the updated bubble from the re-rendered section
-                            const newBubble = doc.querySelector(".cart-count-bubble");
-                            const existingBubble = document.querySelector(".cart-count-bubble");
-                            if (newBubble && existingBubble) {
-                                existingBubble.innerHTML = newBubble.innerHTML;
-                                existingBubble.removeAttribute("aria-hidden");
+                } else {
+                    // --- Cart WAS empty: Liquid never rendered .cart-count-bubble ---
+                    // The icon SVG is also wrong (icon-cart-empty vs icon-cart).
+                    // Use the Section Rendering API to get the correct server-rendered
+                    // cart icon (with filled icon + bubble) and swap it in.
+                    let sectionUpdated = false;
+                    try {
+                        const sectionRes = await fetch(
+                            `${root}/?sections=header`,
+                            { credentials: "same-origin", headers: { "Accept": "application/json" } }
+                        );
+                        if (sectionRes.ok) {
+                            const sections = await sectionRes.json();
+                            const headerHtml = sections["header"];
+                            if (headerHtml) {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(headerHtml, "text/html");
+                                const newCartLink = doc.querySelector("#cart-icon-bubble");
+                                if (newCartLink && cartIconLink) {
+                                    // Replace the entire icon link contents
+                                    // (swaps empty→filled icon AND injects the count bubble)
+                                    cartIconLink.innerHTML = newCartLink.innerHTML;
+                                    sectionUpdated = true;
+                                }
                             }
                         }
+                    } catch (e) {}
+
+                    if (!sectionUpdated && cartIconLink) {
+                        // Fallback: manually inject the bubble if section render failed
+                        const bubble = document.createElement("div");
+                        bubble.className = "cart-count-bubble";
+                        bubble.innerHTML =
+                            `<span aria-hidden="true">${itemCount}</span>` +
+                            `<span class="visually-hidden">${itemCount} items in cart</span>`;
+                        cartIconLink.appendChild(bubble);
                     }
-                } catch (e) {}
+                }
             }
 
-            // Notify theme cart systems — pass count in detail so listeners
-            // don't need to do their own fetch (avoids a second race).
+            // Notify theme cart systems
             const cartEventDetail = itemCount !== null ? { detail: { itemCount } } : {};
             document.dispatchEvent(new CustomEvent("cart:refresh", { bubbles: true, ...cartEventDetail }));
             document.dispatchEvent(new CustomEvent("cart:updated", { bubbles: true, ...cartEventDetail }));
