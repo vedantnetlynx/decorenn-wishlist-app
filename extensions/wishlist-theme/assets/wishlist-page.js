@@ -254,7 +254,7 @@
                 throw new Error(errData.description || errData.message || "Failed to add to cart");
             }
 
-            btn.textContent = "Added!";
+            btn.textContent = "Added Successfully!";
 
             await updateCartCount();
 
