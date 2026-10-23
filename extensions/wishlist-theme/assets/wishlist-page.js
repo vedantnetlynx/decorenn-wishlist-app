@@ -201,75 +201,58 @@
 
             btn.textContent = "Added!";
 
-            // Get the fresh cart count from the server
-            let itemCount = null;
+            // Update the header cart icon — same proven pattern as yarn-color-booklets.js
             try {
                 const cartRes = await fetch(`${root}/cart.js`, { credentials: "same-origin" });
                 if (cartRes.ok) {
                     const cartData = await cartRes.json();
-                    itemCount = cartData.item_count;
+                    const itemCount = cartData.item_count;
+
+                    // Target every #cart-icon-bubble on the page (same as yarn-color-booklets)
+                    document.querySelectorAll("#cart-icon-bubble").forEach((cartIcon) => {
+                        let cartBubble = cartIcon.querySelector(".cart-count-bubble");
+
+                        if (itemCount > 0) {
+                            if (!cartBubble) {
+                                // Cart WAS empty — .cart-count-bubble was never rendered by Liquid.
+                                // Build it from scratch with the correct span structure.
+                                cartBubble = document.createElement("div");
+                                cartBubble.className = "cart-count-bubble";
+
+                                const visibleSpan = document.createElement("span");
+                                visibleSpan.setAttribute("aria-hidden", "true");
+
+                                const hiddenSpan = document.createElement("span");
+                                hiddenSpan.className = "visually-hidden";
+
+                                cartBubble.appendChild(visibleSpan);
+                                cartBubble.appendChild(hiddenSpan);
+                                cartIcon.appendChild(cartBubble);
+                            }
+
+                            // Update both spans
+                            const visibleSpan = cartBubble.querySelector("[aria-hidden=\"true\"]");
+                            if (visibleSpan) visibleSpan.textContent = itemCount;
+
+                            const hiddenSpan = cartBubble.querySelector(".visually-hidden");
+                            if (hiddenSpan) hiddenSpan.textContent = `${itemCount} items`;
+
+                            cartBubble.style.display = "";
+                        } else if (cartBubble) {
+                            cartBubble.remove();
+                        }
+                    });
+
+                    // Also update any other generic cart count elements in the theme
+                    document.querySelectorAll("[data-cart-count], .cart-count, .cart-item-count").forEach((el) => {
+                        el.textContent = itemCount;
+                    });
                 }
             } catch (e) {}
 
-            if (itemCount !== null) {
-                const existingBubble = document.querySelector(".cart-count-bubble");
-                const cartIconLink = document.querySelector("#cart-icon-bubble");
-
-                if (existingBubble) {
-                    // --- Cart already had items: bubble exists, just update the count ---
-                    existingBubble.querySelectorAll("span").forEach((s) => {
-                        if (s.hasAttribute("aria-hidden")) {
-                            // The visible number span
-                            s.textContent = itemCount;
-                        } else {
-                            // The visually-hidden accessible text span
-                            s.textContent = itemCount + " items in cart";
-                        }
-                    });
-                } else {
-                    // --- Cart WAS empty: Liquid never rendered .cart-count-bubble ---
-                    // The icon SVG is also wrong (icon-cart-empty vs icon-cart).
-                    // Use the Section Rendering API to get the correct server-rendered
-                    // cart icon (with filled icon + bubble) and swap it in.
-                    let sectionUpdated = false;
-                    try {
-                        const sectionRes = await fetch(
-                            `${root}/?sections=header`,
-                            { credentials: "same-origin", headers: { "Accept": "application/json" } }
-                        );
-                        if (sectionRes.ok) {
-                            const sections = await sectionRes.json();
-                            const headerHtml = sections["header"];
-                            if (headerHtml) {
-                                const parser = new DOMParser();
-                                const doc = parser.parseFromString(headerHtml, "text/html");
-                                const newCartLink = doc.querySelector("#cart-icon-bubble");
-                                if (newCartLink && cartIconLink) {
-                                    // Replace the entire icon link contents
-                                    // (swaps empty→filled icon AND injects the count bubble)
-                                    cartIconLink.innerHTML = newCartLink.innerHTML;
-                                    sectionUpdated = true;
-                                }
-                            }
-                        }
-                    } catch (e) {}
-
-                    if (!sectionUpdated && cartIconLink) {
-                        // Fallback: manually inject the bubble if section render failed
-                        const bubble = document.createElement("div");
-                        bubble.className = "cart-count-bubble";
-                        bubble.innerHTML =
-                            `<span aria-hidden="true">${itemCount}</span>` +
-                            `<span class="visually-hidden">${itemCount} items in cart</span>`;
-                        cartIconLink.appendChild(bubble);
-                    }
-                }
-            }
-
             // Notify theme cart systems
-            const cartEventDetail = itemCount !== null ? { detail: { itemCount } } : {};
-            document.dispatchEvent(new CustomEvent("cart:refresh", { bubbles: true, ...cartEventDetail }));
-            document.dispatchEvent(new CustomEvent("cart:updated", { bubbles: true, ...cartEventDetail }));
+            document.dispatchEvent(new CustomEvent("cart:refresh", { bubbles: true }));
+            document.dispatchEvent(new CustomEvent("cart:updated", { bubbles: true }));
 
             setTimeout(() => {
                 btn.disabled = false;
