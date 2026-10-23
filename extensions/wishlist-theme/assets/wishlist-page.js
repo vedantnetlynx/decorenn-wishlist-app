@@ -18,7 +18,7 @@
         let res;
         try {
             res = await fetch(`${API_BASE}${path}`, { credentials: "same-origin", ...options });
-        } catch (e) {}
+        } catch (e) { }
 
         if (!res || res.status === 404) {
             const alternateBase = API_BASE.includes("wishlist-1")
@@ -31,7 +31,7 @@
                         API_BASE = alternateBase;
                         res = retryRes;
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
         }
 
@@ -174,6 +174,61 @@
         if (!grid.children.length) showEmpty();
     }
 
+    async function updateCartCount() {
+        try {
+            const root = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root)
+                || (cfg.rootUrl || "/");
+            const res = await fetch(`${root}cart.js?_=${Date.now()}`, {
+                method: "GET",
+                headers: { "Accept": "application/json" },
+                cache: "no-store",
+                credentials: "same-origin",
+            });
+            if (!res.ok) throw new Error("Failed to fetch cart: " + res.status);
+
+            const cart = await res.json();
+            const itemCount = cart.item_count;
+
+            document.querySelectorAll("#cart-icon-bubble").forEach((cartIcon) => {
+                let bubble = cartIcon.querySelector(".cart-count-bubble");
+
+                if (itemCount > 0) {
+                    if (!bubble) {
+                        bubble = document.createElement("div");
+                        bubble.className = "cart-count-bubble";
+
+                        const visible = document.createElement("span");
+                        visible.setAttribute("aria-hidden", "true");
+
+                        const hidden = document.createElement("span");
+                        hidden.className = "visually-hidden";
+
+                        bubble.appendChild(visible);
+                        bubble.appendChild(hidden);
+                        cartIcon.appendChild(bubble);
+                    }
+
+                    const visible = bubble.querySelector('[aria-hidden="true"]');
+                    if (visible) visible.textContent = itemCount;
+
+                    const hidden = bubble.querySelector(".visually-hidden");
+                    if (hidden) hidden.textContent = `${itemCount} items`;
+
+                    bubble.style.display = "";
+                } else if (bubble) {
+                    bubble.remove();
+                }
+            });
+
+            document.querySelectorAll("[data-cart-count], .cart-count, .cart-item-count")
+                .forEach((el) => { el.textContent = itemCount; });
+
+            document.dispatchEvent(new CustomEvent("cart:updated", { detail: { cart } }));
+        } catch (err) {
+            console.error("[wishlist] updateCartCount error:", err);
+        }
+    }
+
     async function addToCart(variantId, btn) {
         if (!variantId || btn.disabled) return;
         const originalText = btn.textContent;
@@ -200,6 +255,8 @@
             }
 
             btn.textContent = "Added!";
+
+            await updateCartCount();
 
             // Update the header cart icon — same proven pattern as yarn-color-booklets.js
             try {
@@ -248,7 +305,7 @@
                         el.textContent = itemCount;
                     });
                 }
-            } catch (e) {}
+            } catch (e) { }
 
             // Notify theme cart systems
             document.dispatchEvent(new CustomEvent("cart:refresh", { bubbles: true }));
